@@ -1,0 +1,78 @@
+﻿<?
+
+$len = 80;
+
+//============= db settings ===========================
+
+include '../proekt/dbconf.php';
+
+
+//============= db connect ============================
+
+mysql_connect(dbhost, dblogin, dbpassw) or die ("Could not connect ".dbhost);
+mysql_select_db (database) or die ("Could not select database ".database);
+mysql_query('set character set cp1251');
+
+//============= del record ========================
+if (isset($_GET['delk']) && isset($_GET['delp'])) {
+	$k = (int)$_GET['delk'];
+	$p = (int)$_GET['delp'];
+	mysql_query("DELETE FROM svyaz WHERE proekt=$p AND kafedra=$k");
+	mysql_close();
+	header('Location: '.$_SERVER['PHP_SELF']);
+}
+
+
+//============= add new record ========================
+
+if (isset($_POST['add'])) {
+	$p = (int)$_POST['proekt'];
+	$k = (int)$_POST['kafedra'];
+	
+	mysql_query("INSERT svyaz SET proekt=$p, kafedra=$k");
+	mysql_close();
+	header('Location: '.$_SERVER['PHP_SELF']);
+}
+
+
+//=====================================================
+
+//$query = 'SELECT p.nazvanie,k.ua FROM proekt as p RIGHT JOIN svyaz as s ON p.id=s.proekt ,svyaz LEFT JOIN kafedra as k ON k.id=s.kafedra';
+$query = 'SELECT p.nazvanie,k.ua,p.id,k.id FROM proekt as p,svyaz as s, kafedra as k WHERE p.id=s.proekt AND s.kafedra=k.id AND p.lang=\''.lang.'\' ORDER BY p.nazvanie,k.ua';
+$result = mysql_query($query) or die("Invalid query: " . mysql_error());
+
+
+echo '<html><body><head><META http-equiv=Content-Type content="text/html; charset=windows-1251"></head><table border>';
+while ($res = mysql_fetch_row($result)) {
+	echo '<tr><td>'.(substr($res[0],0,$len));
+	if (strlen($res[0])>$len)
+		echo '...';
+	echo '</td><td>'.$res[1];
+	echo '</td><td><a href="'.$_SERVER['PHP_SELF'].'?delk='.$res[3].'&delp='.$res[2].'">'.del.'</a><td>';
+	echo '</td><tr>';
+}
+	
+echo '</table>';
+
+
+echo '<form method="post"><br><br><select name="proekt">';
+$result = mysql_query("SELECT id,nazvanie FROM proekt WHERE lang='".lang."'") or die("Invalid query: " . mysql_error());
+while ($res = mysql_fetch_row($result)) {
+	echo '<option value="'.$res[0].'">'.substr($res[1],0,$len);
+	if (strlen($res[1])>$len) echo '...';
+	echo '</option>';
+}
+echo '</select>';
+
+echo '<select name="kafedra">';
+$result = mysql_query('SELECT id,ua FROM kafedra') or die("Invalid query: " . mysql_error());
+while ($res = mysql_fetch_row($result))
+	echo '<option value="'.$res[0].'">'.$res[1].'</option>';
+echo '</select><input type="submit" name="add" value="'.add.'">';
+
+
+echo '</form></body></html>';
+
+mysql_close();
+
+?>

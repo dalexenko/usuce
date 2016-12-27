@@ -1,0 +1,21 @@
+﻿.menu {
+	color: #ffffff;
+	text-decoration: none;
+}
+
+.amenu {
+	color: #cccccc;
+	text-decoration: none;
+}
+
+.lbut {
+	 
+	border: 0;
+	border-top-width: 1;
+	border-style: solid;
+	border-color: #666666;
+	background-color: #999999;
+	
+	
+	
+}

@@ -1,0 +1,172 @@
+﻿<?
+	include '../config.php';
+	include '../lang_ru.php';
+	include '../header.php';
+
+	//регистрация + подключени к бд
+	include '../lib.php';
+	connect_db();
+	register();
+	
+	include '../lib_n.php';
+
+//===========================================================
+		
+	//изменение и форма добавления новостей
+	if(isset($_POST['b_add1']) or isset($_GET['id'])) {
+		if(isset($_GET['id'])) {
+			$result=mysql_query("SELECT * FROM news where d_create='$_GET[id]'") or die('Invalid query: '.mysql_error());
+			$tabl=mysql_fetch_assoc($result);
+		}
+		?>
+		<html>
+		<head>
+		<title>
+		Управление новостями
+		</title>
+		</head>
+		<body>
+		<form method="post" action=<? echo $_SERVER['PHP_SELF'] ?>>
+		<table border="1">
+		<caption>Добавление новостей</caption>
+		<tbody>
+			<tr>
+				<td><? echo D_CREATE ?></td>
+				<td><? if(isset($tabl['d_create'])) echo time_form($tabl['d_create']); else echo time_form(time()) ?><input type="hidden" name="d_create" value="<? if(isset($tabl['d_create'])) echo $tabl['d_create']; else echo time()?>"></td>
+		  <tr>
+				<td><? echo TYPE ?></td>
+				<td><select size="1" name="type">
+					<?
+						if(main_root()) {
+							echo '<option value="site" '.($tabl['news_type']=='site'?'selected':'').'>site</option>';
+							echo '<option value="stud" '.($tabl['news_type']=='stud'?'selected':'').'>stud</option>';
+							echo '<option value="prep" '.($tabl['news_type']=='prep'?'selected':'').'>prep</option>';
+							}
+						else {
+							$result=mysql_query("SELECT news_type FROM rules where name='$_COOKIE[name]' and (access='root' or access='write')") or die('Invalid query: '.mysql_error());
+							while($row = mysql_fetch_assoc($result))
+								echo "<option value=\"$row[news_type]\" ".($tabl['news_type']==$row[news_type]?'selected':'').">$row[news_type]</option>";
+								}
+					?>
+					</select></td>
+		<tr>
+			<td><? echo LANG ?></td>
+			<td><select size="1" name="lang">
+				<option value="ua">ua</option>
+				<option value="ru">ru</option>
+				<option value="en">en</option>
+				</select></td>
+		<tr>
+			<td><? echo HEAD ?></td>
+			<td><input type="text" name="head" maxlenght="100" size="67" value="<? if(isset($tabl['header'])) echo $tabl['header']?>"></td>
+		<tr>
+			<td><? echo BODY ?></td>
+			<td><textarea name="body" cols="60" rows="10"><? if(isset($tabl['body'])) echo $tabl['body']?></textarea></td>
+		<tr>
+			<td><? echo VISIBLE ?></td>
+			<td><input type="checkbox" name="visible" <? if(isset($tabl['body'])) echo $tabl['visible']?'checked':'' ?>></td>
+		<tr>
+			<td><? echo BUTTON ?></td>
+			<td> <? if(isset($_POST['b_add1']))
+					echo '<input type="submit" name="b_add2" value="'.ADD.'"></td>';
+				else 
+					echo '<input type="submit" name="b_ch" value="'.CHANGE.'">' ?>
+		</table>
+		</body>
+		</html>
+		<?
+		exit;
+	}
+
+//===========================================================
+	
+	//добавление новости
+	if(isset($_POST['b_add2'])) {
+		$_POST['type'] or die('Type is not set');
+		$_POST['lang'] or die('Lang is not set');
+		$_POST['head'] or die('Head is not set');
+		$visible = isset($_POST['visible']);
+		
+		mysql_query("INSERT news SET d_create='".time()."', name='$_COOKIE[name]', news_type='$_POST[type]', lang='$_POST[lang]', header='".addslashes($_POST['head'])."', body='".addslashes($_POST['body'])."', d_modify='".time()."', visible='$visible'") or die('Invalid query: '.mysql_error());
+		
+		//перегрузка страницы
+		header('Location: '.$_SERVER['PHP_SELF']);
+	}
+	
+//===========================================================
+	
+	//Изменение новости
+	if(isset($_POST['b_ch'])) {
+	//print_r($_POST);
+		$result = mysql_query("UPDATE news SET news_type='$_POST[type]', lang='$_POST[lang]', header='".addslashes($_POST['head'])."', body='".addslashes($_POST['body'])."', d_modify='".time()."', visible='".isset($_POST['visible'])."' WHERE d_create='$_POST[d_create]'") or die("Invalid query: " . mysql_error());
+	
+	//перегрузка страницы
+	header('Location: '.$_SERVER['PHP_SELF']);
+	}
+	
+	
+
+	
+//===========================================================
+
+	//Удаление новости
+	if(isset($_POST['b_del']) and is_array($_POST['b_del'])) {
+		foreach($_POST['del'] as $v)
+			mysql_query("DELETE FROM news WHERE d_create='$v'") or die("Invalid query: " . mysql_error());
+		#echo "$v<br>";
+		//перегрузка страницы
+		header('Location: '.$_SERVER['PHP_SELF']);		
+	}
+
+//===========================================================
+
+?>
+<html>
+<head>
+<title>
+Управление новостями
+</title>
+</head>
+<body>
+<?
+if(main_root()) {
+	echo '<a href="user.php">add/edit users</a> <a href="rules.php">add/edit rules</a>';
+}
+?>
+
+<form method="post" action=<? echo $_SERVER['PHP_SELF'] ?>>
+	<?
+	if(main_root())
+		$query='select * from news';
+	else
+		$query="select DISTINCT news.* from news, rules where (news.news_type=rules.news_type and rules.access='root' and rules.name='$_COOKIE[name]') or news.name='$_COOKIE[name]'";
+	$result = mysql_query($query) or die("Invalid query: " . mysql_error());
+	
+	while ($row = mysql_fetch_assoc($result)) {
+	#print_r($row);
+	?>
+	<table border="1">
+	<caption>Новости</caption>
+	<tbody>
+		<tr><th><? echo D_CREATE ?></th><td><a href="<? echo $_SERVER['PHP_SELF'].'?id='.$row['d_create'] ?>"><? echo time_form($row['d_create'])?></a></td></tr>
+		<tr><th><? echo NAME ?></th><td><? echo $row['name']?></td></tr>
+		<tr><th><? echo TYPE ?></th><td><? echo $row['news_type']?></td></tr>
+		<tr><th><? echo LAN ?></th><td><? echo $row['lang']?></td></tr>
+		<tr><th><? echo HEAD ?></th><td><? echo $row['header']?></td></tr>
+		<tr><th><? echo BODY ?></th><td><? echo $row['body']?></td></tr>
+		<tr><th><? echo D_MOD ?></th><td><? echo ($row['d_create']==$row['d_modify'])?NOT_CH:time_form($row['d_modify']) ?></td></tr>
+		<tr><th><? echo VISIBLE ?></th><td><? echo $row['visible']?YES:NO ?></td></tr>
+ 		<tr><th><? echo DELETE ?></th><td><input type="checkbox" name=del[] value="<? echo $row['d_create']?>"></td></tr>
+	</tbody>
+	</table>
+	<?
+	}
+	?>
+	<br><input type="submit" name="b_add1" value="<? echo ADD ?>">
+	<input type="submit" name="b_del" value="<? echo DELETE ?>">
+	<input type="submit" name="b_exit" value="<? echo BEXIT ?>">
+	
+
+</form>
+</body>
+</html>
